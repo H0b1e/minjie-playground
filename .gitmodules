@@ -11,7 +11,7 @@
 	url = https://github.com/OSCPU/NutShell.git
 [submodule "env-scripts"]
 	path = env-scripts
-	url = https://github.com/OpenXiangShan/env-scripts.git
+	url = git@github.com:H0b1e/env-scripts.git
 [submodule "workload-builder"]
 	path = workload-builder
 	url = https://github.com/OpenXiangShan/workload-builder.git

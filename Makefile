@@ -243,17 +243,12 @@ else
 endif
 
 nutshell-verilog:
-	@test ! -L "$(NUT_DIFFTEST_HOME)" || { echo "ERROR: NutShell/difftest must be a real Git worktree, not a symbolic link."; exit 1; }
-	@git -C "$(NUT_DIFFTEST_HOME)" rev-parse --is-inside-work-tree >/dev/null || { echo "ERROR: missing nested NutShell DiffTest worktree."; exit 1; }
-	@git -C "$(NUT_DIFFTEST_HOME)" cat-file -e "$(NUT_DIFFTEST_REV)^{commit}" 2>/dev/null || { echo "ERROR: required DiffTest commit $(NUT_DIFFTEST_REV) is unavailable locally."; exit 1; }
-	@current=$$(git -C "$(NUT_DIFFTEST_HOME)" rev-parse HEAD); \
-	if [ "$$current" != "$(NUT_DIFFTEST_REV)" ]; then echo "ERROR: NutShell/difftest is at $$current; checkout $(NUT_DIFFTEST_REV) first."; exit 1; fi
+	@test ! -L "$(NUT_DIFFTEST_HOME)" || { echo "ERROR: NutShell/difftest must not be a symbolic link"; exit 1; }
+	@test "$$(git -C "$(NUT_DIFFTEST_HOME)" rev-parse HEAD)" = "$(NUT_DIFFTEST_REV)" || { echo "ERROR: checkout $(NUT_DIFFTEST_REV) in NutShell/difftest first"; exit 1; }
 	@mkdir -p "$(NUT_BUILD_LOG_DIR)"
 	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_HOME)" verilog BOARD="$(NUT_BOARD)" CORE="$(NUT_CORE)" MILL_ARGS="$(NUT_MILL_ARGS)" -j$(JOBS) 2>&1 | tee "$(NUT_VERILOG_LOG)"
 
 nutshell-release:
-	@test -f "$(NUT_BUILD_DIR)/rtl/TopMain.sv" || { echo "ERROR: run make nutshell-verilog first."; exit 1; }
-	@test -f "$(NUT_BUILD_DIR)/generated-src/difftest_profile.json" || { echo "ERROR: missing DiffTest profile; run make nutshell-verilog first."; exit 1; }
 	@mkdir -p "$(NUT_RELEASE_DIR)" "$(NUT_BUILD_LOG_DIR)"
 	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_DIFFTEST_HOME)" fpga-release RELEASE_DIR="$(NUT_RELEASE_DIR)" RELEASE_SUFFIX="$(NUT_RELEASE_SUFFIX)" 2>&1 | tee "$(NUT_RELEASE_LOG)"
 

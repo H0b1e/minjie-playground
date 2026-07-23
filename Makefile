@@ -31,17 +31,10 @@ DIFFTEST_EXCLUDE ?=
 XS_CONFIG ?= FpgaDiffDefaultConfig
 XS_DEBUG_ARGS ?= --difftest-config $(DIFFTEST_CONFIG) $(if $(strip $(DIFFTEST_EXCLUDE)),--difftest-exclude $(DIFFTEST_EXCLUDE),)
 
-NUT_BOARD ?= fpgadiff
-NUT_CORE ?= inorder
-NUT_MILL_ARGS ?= --difftest-config $(DIFFTEST_CONFIG)
 NUT_DIFFTEST_HOME := $(NUT_HOME)/difftest
 NUT_DIFFTEST_REV := 36062fbd54579220e8aff92bc820e2fd3e749539
 NUT_BUILD_DIR := $(NUT_HOME)/build
-NUT_BUILD_LOG_DIR := $(NUT_BUILD_DIR)/build-log
 NUT_RELEASE_DIR := $(NUT_BUILD_DIR)/release
-NUT_VERILOG_LOG := $(NUT_BUILD_LOG_DIR)/verilog-$(LOG_STAMP).log
-NUT_RELEASE_LOG := $(NUT_BUILD_LOG_DIR)/release-$(LOG_STAMP).log
-NUT_RELEASE_SUFFIX ?= $(TIME_STAMP)
 
 DESIGN_HOME = $(if $(filter $(DESIGN),nutshell),$(NUT_HOME),$(XS_HOME))
 FPGA_HOST_HOME ?=
@@ -245,12 +238,12 @@ endif
 nutshell-verilog:
 	@test ! -L "$(NUT_DIFFTEST_HOME)" || { echo "ERROR: NutShell/difftest must not be a symbolic link"; exit 1; }
 	@test "$$(git -C "$(NUT_DIFFTEST_HOME)" rev-parse HEAD)" = "$(NUT_DIFFTEST_REV)" || { echo "ERROR: checkout $(NUT_DIFFTEST_REV) in NutShell/difftest first"; exit 1; }
-	@mkdir -p "$(NUT_BUILD_LOG_DIR)"
-	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_HOME)" verilog BOARD="$(NUT_BOARD)" CORE="$(NUT_CORE)" MILL_ARGS="$(NUT_MILL_ARGS)" -j$(JOBS) 2>&1 | tee "$(NUT_VERILOG_LOG)"
+	@mkdir -p "$(NUT_BUILD_DIR)/build-log"
+	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_HOME)" verilog BOARD=fpgadiff CORE=inorder MILL_ARGS="--difftest-config $(DIFFTEST_CONFIG)" -j$(JOBS) 2>&1 | tee "$(NUT_BUILD_DIR)/build-log/verilog-$(LOG_STAMP).log"
 
 nutshell-release:
-	@mkdir -p "$(NUT_RELEASE_DIR)" "$(NUT_BUILD_LOG_DIR)"
-	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_DIFFTEST_HOME)" fpga-release RELEASE_DIR="$(NUT_RELEASE_DIR)" RELEASE_SUFFIX="$(NUT_RELEASE_SUFFIX)" 2>&1 | tee "$(NUT_RELEASE_LOG)"
+	@mkdir -p "$(NUT_RELEASE_DIR)" "$(NUT_BUILD_DIR)/build-log"
+	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_DIFFTEST_HOME)" fpga-release RELEASE_DIR="$(NUT_RELEASE_DIR)" RELEASE_SUFFIX="$(RELEASE_SUFFIX)" 2>&1 | tee "$(NUT_BUILD_DIR)/build-log/release-$(LOG_STAMP).log"
 
 host:
 	$(call require_design)

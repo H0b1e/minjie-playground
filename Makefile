@@ -35,6 +35,7 @@ NUT_DIFFTEST_HOME := $(NUT_HOME)/difftest
 NUT_DIFFTEST_REV := 36062fbd54579220e8aff92bc820e2fd3e749539
 NUT_BUILD_DIR := $(NUT_HOME)/build
 NUT_RELEASE_DIR := $(NUT_BUILD_DIR)/release
+NUT_HOST_PKG ?= $(NUT_RELEASE_DIR)/fpga-host-pkg.tar.gz
 
 DESIGN_HOME = $(if $(filter $(DESIGN),nutshell),$(NUT_HOME),$(XS_HOME))
 FPGA_HOST_HOME ?=
@@ -146,7 +147,7 @@ RANDOM_MEM ?= 1
 SEED ?= 1234
 RUN_LOG ?= $(BUILD_DIR)/run-log/run-$$(date +%Y%m%d-%H%M%S).log
 
-.PHONY: help init link_difftest link_xiangshan_difftest nutshell-verilog nutshell-release \
+.PHONY: help init link_difftest link_xiangshan_difftest nutshell-verilog nutshell-release nutshell-host-pkg \
 	clean verilog release host bit write_bitstream write_jtag_flash write_jtag_ddr \
 	reset_cpu workload nemu run_host xiangshan nutshell xs nut
 
@@ -157,6 +158,7 @@ help:
 	@printf '%s\n' '  make nutshell-verilog             build NutShell FPGA DiffTest Verilog under NutShell/build'
 	@printf '%s\n' '  make release xiangshan            package XiangShan RTL/difftest release'
 	@printf '%s\n' '  make nutshell-release             package NutShell release under NutShell/build/release'
+	@printf '%s\n' '  make nutshell-host-pkg FPGA_HOST_HOME=NutShell/<tag>   pack fpga-host source for on-host build'
 	@printf '%s\n' '  make host xiangshan FPGA_HOST_HOME=...'
 	@printf '%s\n' '  make bit xiangshan                build bitstream bundle under bitstream/<design>-<time>/'
 	@printf '%s\n' '  make workload xiangshan TARGET=am/hello  build workload and generate ready-to-run/<design>-<target>'
@@ -244,6 +246,17 @@ nutshell-verilog:
 nutshell-release:
 	@mkdir -p "$(NUT_RELEASE_DIR)" "$(NUT_BUILD_DIR)/build-log"
 	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_DIFFTEST_HOME)" fpga-release RELEASE_DIR="$(NUT_RELEASE_DIR)" RELEASE_SUFFIX="$(RELEASE_SUFFIX)" 2>&1 | tee "$(NUT_BUILD_DIR)/build-log/release-$(LOG_STAMP).log"
+
+# Pack a release's difftest source + generated headers into a self-contained
+# tarball so fpga-host can be compiled on the FPGA host machine itself.
+nutshell-host-pkg:
+	$(call require_var,FPGA_HOST_HOME)
+	@test -d "$(FPGA_HOST_HOME)/difftest" -a -d "$(FPGA_HOST_HOME)/build/generated-src" || { echo "ERROR: FPGA_HOST_HOME must point to an unpacked release dir (with difftest/ and build/generated-src/)"; exit 1; }
+	@mkdir -p "$(NUT_RELEASE_DIR)"
+	tar -czf "$(NUT_HOST_PKG)" --exclude=.git \
+		-C "$(FPGA_HOST_HOME)" difftest build/generated-src \
+		-C "$(ROOT_DIR)" --transform 's|^scripts/fpga-host-build.sh|build.sh|' scripts/fpga-host-build.sh
+	@echo "fpga-host source package: $(NUT_HOST_PKG)"
 
 host:
 	$(call require_design)

@@ -37,6 +37,17 @@ make verilog $DESIGN
 
 Output: Verilog files under `<design>/build/`.
 
+### NutShell Flow
+
+NutShell must use its real nested `difftest` Git worktree; do not replace it with a symbolic link. Check out DiffTest commit `36062fbd54579220e8aff92bc820e2fd3e749539` in `NutShell/difftest`, then run these parent targets from the repository root:
+
+```sh
+make nutshell-verilog
+make nutshell-release
+```
+
+They use `BOARD=fpgadiff`, `CORE=inorder`, and `DIFFTEST_CONFIG=ESBIFDU`. Verilog and logs are written below `NutShell/build/`; `nutshell-release` creates `NutShell/build/release/` automatically and writes the release tarball there. The release script also keeps its unpacked staging directory below `NutShell/`.
+
 For the XiangShan OpenLLC flow, use `XS_CONFIG=FpgaDiffKMHV2Config`.
 For a no-vector XiangShan build, explicitly pass `DIFFTEST_EXCLUDE=Vec`.
 

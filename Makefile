@@ -32,7 +32,16 @@ XS_CONFIG ?= FpgaDiffDefaultConfig
 XS_DEBUG_ARGS ?= --difftest-config $(DIFFTEST_CONFIG) $(if $(strip $(DIFFTEST_EXCLUDE)),--difftest-exclude $(DIFFTEST_EXCLUDE),)
 
 NUT_BOARD ?= fpgadiff
+NUT_CORE ?= inorder
 NUT_MILL_ARGS ?= --difftest-config $(DIFFTEST_CONFIG)
+NUT_DIFFTEST_HOME := $(NUT_HOME)/difftest
+NUT_DIFFTEST_REV := 36062fbd54579220e8aff92bc820e2fd3e749539
+NUT_BUILD_DIR := $(NUT_HOME)/build
+NUT_BUILD_LOG_DIR := $(NUT_BUILD_DIR)/build-log
+NUT_RELEASE_DIR := $(NUT_BUILD_DIR)/release
+NUT_VERILOG_LOG := $(NUT_BUILD_LOG_DIR)/verilog-$(LOG_STAMP).log
+NUT_RELEASE_LOG := $(NUT_BUILD_LOG_DIR)/release-$(LOG_STAMP).log
+NUT_RELEASE_SUFFIX ?= $(TIME_STAMP)
 
 DESIGN_HOME = $(if $(filter $(DESIGN),nutshell),$(NUT_HOME),$(XS_HOME))
 FPGA_HOST_HOME ?=
@@ -144,16 +153,17 @@ RANDOM_MEM ?= 1
 SEED ?= 1234
 RUN_LOG ?= $(BUILD_DIR)/run-log/run-$$(date +%Y%m%d-%H%M%S).log
 
-.PHONY: help init link_difftest clean verilog release host bit write_bitstream \
-	write_jtag_flash write_jtag_ddr reset_cpu workload nemu run_host \
-	xiangshan nutshell xs nut
+.PHONY: help init link_difftest link_xiangshan_difftest nutshell-verilog nutshell-release \
+	clean verilog release host bit write_bitstream write_jtag_flash write_jtag_ddr \
+	reset_cpu workload nemu run_host xiangshan nutshell xs nut
 
 help:
 	@printf '%s\n' 'FpgaDiff playground targets:'
 	@printf '%s\n' '  make init                         init top submodules; run submodule init where available'
 	@printf '%s\n' '  make verilog xiangshan            build XiangShan FPGA DiffTest Verilog'
-	@printf '%s\n' '  make verilog nutshell             build NutShell FPGA DiffTest Verilog'
-	@printf '%s\n' '  make release xiangshan            package RTL/difftest release'
+	@printf '%s\n' '  make nutshell-verilog             build NutShell FPGA DiffTest Verilog under NutShell/build'
+	@printf '%s\n' '  make release xiangshan            package XiangShan RTL/difftest release'
+	@printf '%s\n' '  make nutshell-release             package NutShell release under NutShell/build/release'
 	@printf '%s\n' '  make host xiangshan FPGA_HOST_HOME=...'
 	@printf '%s\n' '  make bit xiangshan                build bitstream bundle under bitstream/<design>-<time>/'
 	@printf '%s\n' '  make workload xiangshan TARGET=am/hello  build workload and generate ready-to-run/<design>-<target>'
@@ -177,17 +187,17 @@ help:
 init:
 	git submodule update --init
 	git -C $(XS_HOME) config submodule.difftest.update none
-	git -C $(NUT_HOME) config submodule.difftest.update none
 	$(MAKE) -C $(XS_HOME) init
 	$(MAKE) -C $(WORKLOAD_HOME) init
 	$(MAKE) -C $(BIN2DDR_HOME) FPGA=1
-	$(MAKE) link_difftest
+	$(MAKE) link_xiangshan_difftest
 
-link_difftest:
+link_difftest: link_xiangshan_difftest
+
+link_xiangshan_difftest:
 	@set -e; \
 	test -d "$(DIFFTEST_HOME)" || { echo "ERROR: missing top-level difftest at $(DIFFTEST_HOME)"; exit 1; }; \
-	$(call link_one_difftest,$(XS_HOME)); \
-	$(call link_one_difftest,$(NUT_HOME))
+	$(call link_one_difftest,$(XS_HOME))
 
 clean:
 	$(call require_design)
@@ -195,14 +205,12 @@ clean:
 
 verilog:
 	$(call require_design)
-	$(MAKE) link_difftest
-	mkdir -p $(BUILD_LOG_DIR)
 ifeq ($(DESIGN),nutshell)
-	set -o pipefail; \
-	NOOP_HOME=$(NUT_HOME) \
-	$(MAKE) -C $(NUT_HOME) verilog BOARD=$(NUT_BOARD) \
-		MILL_ARGS="$(NUT_MILL_ARGS)" -j$(JOBS) 2>&1 | tee $(VERILOG_LOG)
+	@echo "ERROR: use make nutshell-verilog"
+	@exit 2
 else
+	$(MAKE) link_xiangshan_difftest
+	mkdir -p $(BUILD_LOG_DIR)
 	set -o pipefail; \
 	NOOP_HOME=$(XS_HOME) \
 	$(MAKE) -C $(XS_HOME) verilog FPGA=1 CONFIG=$(XS_CONFIG) \
@@ -211,7 +219,11 @@ endif
 
 release:
 	$(call require_design)
-	$(MAKE) link_difftest
+ifeq ($(DESIGN),nutshell)
+	@echo "ERROR: use make nutshell-release"
+	@exit 2
+else
+	$(MAKE) link_xiangshan_difftest
 	mkdir -p $(RELEASE_DIR) $(BUILD_LOG_DIR)
 	set -o pipefail; \
 	NOOP_HOME=$(DESIGN_HOME) \
@@ -228,11 +240,29 @@ release:
 	printf '%s\n' "$$release_name" > "$(RELEASE_LATEST_NAME)"; \
 	echo "Release extracted to $(RELEASE_DIR)/$$release_name"; \
 	echo "Release name written to $(RELEASE_LATEST_NAME)"
+endif
+
+nutshell-verilog:
+	@test ! -L "$(NUT_DIFFTEST_HOME)" || { echo "ERROR: NutShell/difftest must be a real Git worktree, not a symbolic link."; exit 1; }
+	@git -C "$(NUT_DIFFTEST_HOME)" rev-parse --is-inside-work-tree >/dev/null || { echo "ERROR: missing nested NutShell DiffTest worktree."; exit 1; }
+	@git -C "$(NUT_DIFFTEST_HOME)" cat-file -e "$(NUT_DIFFTEST_REV)^{commit}" 2>/dev/null || { echo "ERROR: required DiffTest commit $(NUT_DIFFTEST_REV) is unavailable locally."; exit 1; }
+	@current=$$(git -C "$(NUT_DIFFTEST_HOME)" rev-parse HEAD); \
+	if [ "$$current" != "$(NUT_DIFFTEST_REV)" ]; then echo "ERROR: NutShell/difftest is at $$current; checkout $(NUT_DIFFTEST_REV) first."; exit 1; fi
+	@mkdir -p "$(NUT_BUILD_LOG_DIR)"
+	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_HOME)" verilog BOARD="$(NUT_BOARD)" CORE="$(NUT_CORE)" MILL_ARGS="$(NUT_MILL_ARGS)" -j$(JOBS) 2>&1 | tee "$(NUT_VERILOG_LOG)"
+
+nutshell-release:
+	@test -f "$(NUT_BUILD_DIR)/rtl/TopMain.sv" || { echo "ERROR: run make nutshell-verilog first."; exit 1; }
+	@test -f "$(NUT_BUILD_DIR)/generated-src/difftest_profile.json" || { echo "ERROR: missing DiffTest profile; run make nutshell-verilog first."; exit 1; }
+	@mkdir -p "$(NUT_RELEASE_DIR)" "$(NUT_BUILD_LOG_DIR)"
+	@set -o pipefail; NOOP_HOME="$(NUT_HOME)" $(MAKE) -C "$(NUT_DIFFTEST_HOME)" fpga-release RELEASE_DIR="$(NUT_RELEASE_DIR)" RELEASE_SUFFIX="$(NUT_RELEASE_SUFFIX)" 2>&1 | tee "$(NUT_RELEASE_LOG)"
 
 host:
 	$(call require_design)
 	$(call require_var,FPGA_HOST_HOME)
-	$(MAKE) link_difftest
+ifeq ($(DESIGN),xiangshan)
+	$(MAKE) link_xiangshan_difftest
+endif
 	mkdir -p $(BUILD_LOG_DIR)
 	set -o pipefail; \
 	NOOP_HOME=$(FPGA_HOST_HOME) \

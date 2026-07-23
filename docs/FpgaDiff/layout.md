@@ -7,9 +7,9 @@ minjie-playground/
 ├── Makefile                 # Top-level build orchestrator
 ├── AGENTS.md                # Agent guidelines (points here)
 ├── docs/                    # Project documentation
-├── difftest/                # DiffTest framework (shared by XS & NutShell)
+├── difftest/                # Top-level DiffTest framework (XiangShan flow)
 ├── XiangShan/               # XiangShan RTL source
-├── NutShell/                # NutShell RTL source
+├── NutShell/                # NutShell RTL source and nested DiffTest checkout
 ├── NEMU/                    # NEMU reference model
 ├── workload-builder/        # Workload compilation (Linux & AM)
 ├── Bin2ddr/                 # Binary-to-DDR-txt converter
@@ -28,9 +28,9 @@ minjie-playground/
 
 | Component | Role |
 |-----------|------|
-| `difftest/` | DiffTest hardware modules + software checkers + FPGA host binary. Linked into both XiangShan and NutShell via `make init`. |
+| `difftest/` | DiffTest hardware modules + software checkers + FPGA host binary for the top-level/XiangShan flow. |
 | `XiangShan/` | XiangShan (KunMinghu) RTL. Generates Verilog for FPGA synthesis. |
-| `NutShell/` | NutShell RTL. Generates Verilog for FPGA synthesis. |
+| `NutShell/` | NutShell RTL. Keeps a real nested `difftest` worktree for `make nutshell-verilog` and `make nutshell-release`. |
 | `NEMU/` | RISC-V emulator used as the DiffTest reference model. Compiled into a `.so` shared library. |
 | `workload-builder/` | Builds Linux and AM (bare-metal) workloads with device trees, OpenSBI, and rootfs. |
 | `Bin2ddr/` | Converts a binary image into a `.txt` file for JTAG DDR initialization. H2C runs use the workload `.bin` directly. |
@@ -40,8 +40,10 @@ minjie-playground/
 
 | Path | Contents |
 |------|----------|
-| `build/release/` | Release tarballs, unpacked releases, `latest-<design>.path` and `latest-<design>.name` |
-| `build/build-log/` | Per-stage logs: `verilog-*`, `release-*`, `host-*`, `bit-*`, `nemu-*`, `workload-*` |
+| `build/release/` | XiangShan release tarballs, unpacked releases, `latest-<design>.path` and `latest-<design>.name` |
+| `build/build-log/` | XiangShan/shared-stage logs: `verilog-*`, `release-*`, `host-*`, `bit-*`, `nemu-*`, `workload-*` |
+| `NutShell/build/rtl/` | NutShell FPGA DiffTest Verilog |
+| `NutShell/build/release/` | NutShell release tarballs from `make nutshell-release` |
 | `build/run-log/` | `run_host` runtime logs with timestamps |
 | `ready-to-run/<nemu-config>/` | NEMU reference SO (`riscv64-nemu-interpreter-so`) |
 | `ready-to-run/<design>-<target>/` | Workload `.bin` for H2C loading, plus Bin2ddr `.txt` for JTAG DDR loading |

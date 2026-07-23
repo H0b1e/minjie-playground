@@ -20,8 +20,10 @@ XiangShan / NutShell Verilog
 
 | Path | Contents |
 |------|----------|
-| `build/release/` | Release tarballs, unpacked releases, `latest-<design>.path`, `latest-<design>.name` |
-| `build/build-log/` | Per-stage logs for `verilog`, `release`, `host`, `bit`, `nemu`, `workload` |
+| `build/release/` | XiangShan release tarballs, unpacked releases, `latest-<design>.path`, `latest-<design>.name` |
+| `build/build-log/` | XiangShan and shared-stage logs for `verilog`, `release`, `host`, `bit`, `nemu`, `workload` |
+| `NutShell/build/rtl/` | NutShell FPGA DiffTest Verilog from `make nutshell-verilog` |
+| `NutShell/build/release/` | NutShell release tarballs from `make nutshell-release` |
 | `build/run-log/` | `run_host` runtime logs |
 | `ready-to-run/<nemu-config>/` | NEMU reference SO |
 | `ready-to-run/<design>-<target>/` | Workload `.bin` for H2C loading, plus Bin2ddr `.txt` for JTAG DDR loading |

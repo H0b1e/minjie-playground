@@ -26,3 +26,6 @@
 	path = dma_ip_drivers
 	url = https://github.com/klin02/dma_ip_drivers.git
 	branch = fpga-diff
+[submodule "nexus-am"]
+	path = nexus-am
+	url = https://github.com/H0b1e/nexus-am.git

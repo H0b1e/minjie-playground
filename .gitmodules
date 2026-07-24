@@ -14,7 +14,7 @@
 	url = git@github.com:H0b1e/env-scripts.git
 [submodule "workload-builder"]
 	path = workload-builder
-	url = https://github.com/OpenXiangShan/workload-builder.git
+	url = https://github.com/H0b1e/workload-builder.git
 [submodule "Bin2ddr"]
 	path = Bin2ddr
 	url = https://github.com/xiaokamikami/Bin2ddr

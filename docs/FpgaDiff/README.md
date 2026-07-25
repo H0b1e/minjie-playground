@@ -40,6 +40,7 @@ XiangShan / NutShell Verilog
 | [troubleshooting.md](./troubleshooting.md) | Common issues and debugging approaches: XDMA/PCIe, host hangs, packet errors, DiffTest mismatches |
 | [xdma.md](./xdma.md) | XDMA driver build, install, load script, systemd service, troubleshooting |
 | [debug-flow.md](./debug-flow.md) | Structured debug flow for multi-step FPGA DiffTest investigations |
+| [fpga-host-build.md](./fpga-host-build.md) | Building `fpga-host` on the run host: the `-static`/SIGFPE, AVX-512/SIGILL, and glibc traps, plus the no-sudo recipe |
 
 ## Suggested Reading
 

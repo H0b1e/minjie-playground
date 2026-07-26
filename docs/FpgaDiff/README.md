@@ -34,6 +34,7 @@ XiangShan / NutShell Verilog
 
 | Document | Contents |
 |----------|----------|
+| [repro-guide.md](./repro-guide.md) | Simple step-by-step bring-up across 19p-rt (bitstream + serial) and 19p-host (XDMA DiffTest), with reboot recovery and the build-on-host rule |
 | [workflow.md](./workflow.md) | End-to-end flow with optional parameters and per-step examples |
 | [layout.md](./layout.md) | Project directory structure, component roles, output directories |
 | [workload.md](./workload.md) | Workload compilation for AM and Linux |

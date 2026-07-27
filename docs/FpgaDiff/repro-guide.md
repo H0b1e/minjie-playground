@@ -16,9 +16,12 @@ split across **two hosts** that share one FPGA board:
 
 On the machine with Vivado (the EPYC compile server is fine for *this* step —
 it only produces an FPGA bitstream, nothing that runs on the x86 hosts):
+please check current vivado version: 2024.2
 
 ```sh
 cd env-scripts/fpga_diff/uvhs
+make ddr_ip      # UVHS ddr ip
+make export_vivado_ip  # SoC IPs
 make fe          # UVHS synthesis
 make be          # UVHS place & route -> bitstream
 make rtdb        # extract runtime DB -> ../runtime/rtdb_test/

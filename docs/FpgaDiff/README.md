@@ -42,6 +42,7 @@ XiangShan / NutShell Verilog
 | [xdma.md](./xdma.md) | XDMA driver build, install, load script, systemd service, troubleshooting |
 | [debug-flow.md](./debug-flow.md) | Structured debug flow for multi-step FPGA DiffTest investigations |
 | [fpga-host-build.md](./fpga-host-build.md) | Building `fpga-host` on the run host: the `-static`/SIGFPE, AVX-512/SIGILL, and glibc traps, plus the no-sudo recipe |
+| [uhd-probe.md](./uhd-probe.md) | UHD on-chip waveform capture: DDR remap to f0, probe/trigger build knobs, runtime capture (`make uhd`), and uvd viewing with full RTL hierarchy (`make wave`) |
 
 ## Suggested Reading
 

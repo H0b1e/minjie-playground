@@ -303,10 +303,10 @@ load) the readmem must happen in the **same live session** that downloaded
 the design — `uv_shell` tears down the FPGA image on exit, so a later batch
 session has nothing to read. Three ways to do it:
 
-**1. Interactive session (hang forensics).** Launch `uv_shell` without
-`-script` to get the `hspRun>` prompt, bring the system up with the normal
-download script, then read whenever needed (e.g. after the serial goes
-silent):
+**1. Interactive session (hang forensics).** `make run` does not exit
+`uv_shell` when the script finishes — the session stays at the `hspRun>`
+prompt (the PCIe host side needs it alive anyway). Read whenever needed
+(e.g. after the serial goes silent):
 
 ```tcl
 hspRun> source ./user_script/hw_run_download.tcl    # download + release resets

@@ -290,11 +290,73 @@ default, so plain `make run`/`make uhd` are unaffected):
   and the CPU boots from the staged image.
 - `writemem` addresses count 32-byte DDR words (query `-ddr` Width = 256), so
   the payload is zero-padded **in place** to a 32-byte multiple first.
-- Uncomment the `readmem` line in `ddr_backdoor.tcl` to read back and diff
-  against the source for verification.
+- To verify the write landed, read the range back in the **same session**
+  (see below) — a fresh `uv_shell` session finds the FPGA image already
+  torn down. Note the CPU boots right after the write, so verify quickly or
+  pick a region the boot code does not overwrite.
 - In the `make uhd` form the UHD trigger is armed *before* the backdoor write,
   so the capture window covers the CPU booting from this image.
 - The `.bin` must live on 19p-rt's **local disk** (`~/runtime` is not NFS).
+
+For ad-hoc reads (crash forensics, signature readout, cross-checking an H2C
+load) the readmem must happen in the **same live session** that downloaded
+the design — `uv_shell` tears down the FPGA image on exit, so a later batch
+session has nothing to read. Three ways to do it:
+
+**1. Interactive session (hang forensics).** Launch `uv_shell` without
+`-script` to get the `hspRun>` prompt, bring the system up with the normal
+download script, then read whenever needed (e.g. after the serial goes
+silent):
+
+```tcl
+hspRun> source ./user_script/hw_run_download.tcl    # download + release resets
+hspRun> set ::env(UVHS_RD_ADDR) 0x80340000          # start byte address
+hspRun> set ::env(UVHS_RD_SIZE) 0x10000             # bytes to read
+hspRun> set ::env(UVHS_RD_OUT)  logbuf.bin
+hspRun> source ./user_script/ddr_read.tcl
+```
+
+`user_script/ddr_read.tcl` converts CPU byte addresses to the 32-byte DDR
+word range `readmem` expects and subtracts the `0x8000_0000` base for you, so
+addresses can be copied straight from the vmlinux symbol table. Relative
+`UVHS_RD_OUT` paths land in the uv_shell workdir (`u2_work_dir/`); absolute
+paths also work.
+
+**2. Embedded in a batch flow (read at a deterministic point).** Source the
+same snippet from `hw_run_uhd.tcl` / `hw_run_download.tcl` at the point of
+interest, e.g. dump memory when the trigger times out:
+
+```tcl
+set trigger_tag [trigger -status -wait 1 -timeout 420 -tclobj]
+if {<trigger did not fire>} {
+    source ./user_script/ddr_read.tcl
+}
+```
+
+Export the knobs before launching uv_shell (`UVHS_RD_ADDR=... make uhd`, with
+a matching `export` line in the Makefile), or `set ::env(...)` directly in
+the hw_run script.
+
+**3. Raw one-line `readmem` (no script).** At the `hspRun>` prompt, if you
+already think in 32-byte DDR words:
+
+```tcl
+readmem -rtl fpga_top_debug.core_def.U_UVHS_UVW_AXI4_TO_DDR4\[1023:0\] -hex -file head.txt
+```
+
+Knobs for `ddr_read.tcl` (ways 1 and 2):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `UVHS_RD_ADDR` | `0` | Start **byte** address; >= `0x8000_0000` is treated as CPU-visible and the DDR base is subtracted |
+| `UVHS_RD_SIZE` | `0x8000` | Bytes to read |
+| `UVHS_RD_OUT` | `ddr_readback.bin` | Output file (`.txt` when `UVHS_RD_HEX=1`) |
+| `UVHS_RD_HEX` | `0` | `1` = hex text, one 256-bit word per line (~2x size inflation — keep `UVHS_RD_SIZE` small) |
+
+Typical recipes: verify a backdoor write (`UVHS_RD_ADDR=0
+UVHS_RD_SIZE=<image size>`, then `cmp`); kernel panic (`UVHS_RD_ADDR=<log_buf
+physical address>`); cross-check the H2C load path (`UVHS_RD_ADDR=0x80000000
+UVHS_RD_SIZE=0x1000` and inspect the image header).
 
 ### JTAG Boot Flash Path
 

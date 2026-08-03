@@ -265,6 +265,37 @@ make write_jtag_ddr \
 
 `write_jtag_ddr` is kept for manual debugging and for host builds made with `USE_XDMA_H2C=0`; normal `run_host` uses H2C for DDR loading.
 
+### UVHS DDR Backdoor Load (`UVHS_FW_BIN`)
+
+A third load path, used by the UVHS runtime flow in
+`env-scripts/fpga_diff/runtime/` (the `uv_shell` scripts on 19p-rt, not the
+fpga-host path above). It writes the image through the UVHS memory backdoor
+(`writemem`) instead of XDMA H2C or JTAG — no host-side PCIe traffic is needed,
+which makes it useful when the PCIe/difftest path itself is the thing under
+test.
+
+```sh
+cd env-scripts/fpga_diff/runtime
+make backdoor UVHS_FW_BIN=<image.bin>   # download + backdoor write + boot
+make run      UVHS_FW_BIN=<image.bin>   # same flow via the plain "run" target
+make uhd      UVHS_FW_BIN=<image.bin>   # backdoor write + UHD capture of the boot
+```
+
+How it works (`user_script/ddr_backdoor.tcl`, sourced by both
+`hw_run_download.tcl` and `hw_run_uhd.tcl` when `UVHS_FW_BIN` is set; empty by
+default, so plain `make run`/`make uhd` are unaffected):
+
+- The image is staged at **DDR offset 0** (CPU-visible base `0x8000_0000`)
+  while the CPU reset (`rstn_sw5`) is still held; the script then releases it
+  and the CPU boots from the staged image.
+- `writemem` addresses count 32-byte DDR words (query `-ddr` Width = 256), so
+  the payload is zero-padded **in place** to a 32-byte multiple first.
+- Uncomment the `readmem` line in `ddr_backdoor.tcl` to read back and diff
+  against the source for verification.
+- In the `make uhd` form the UHD trigger is armed *before* the backdoor write,
+  so the capture window covers the CPU booting from this image.
+- The `.bin` must live on 19p-rt's **local disk** (`~/runtime` is not NFS).
+
 ### JTAG Boot Flash Path
 
 For designs that require a boot image in flash, write it through JTAG after every `write_bitstream`.

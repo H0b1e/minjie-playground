@@ -109,6 +109,25 @@ scale; with a 5 ms window centered at 50% the first `tready` beat is easy to
 miss, which looks like a stuck stream but is not. Verify the effective split
 via `triggertime/stoptime` in the wavegen log.
 
+### Capturing a backdoor-loaded boot (`UVHS_FW_BIN`)
+
+When the workload is staged into DDR through the UVHS memory backdoor instead
+of the PCIe H2C path (see [workflow.md - UVHS DDR Backdoor
+Load](./workflow.md#uvhs-ddr-backdoor-load-uvhs_fw_bin)), combine it with the
+capture in one run:
+
+```bash
+make uhd UVHS_FW_BIN=<image.bin>
+```
+
+`hw_run_uhd.tcl` arms the trigger **before** sourcing
+`user_script/ddr_backdoor.tcl`, so the `writemem` staging and the subsequent
+CPU boot from DDR offset 0 both fall inside the capture window. With the
+default `uvhs_lite` trigger (first C2H tvalid beat) the trigger only fires if
+the booted image actually reaches difftest traffic; to watch the boot itself,
+switch the ini condition to an earlier event (e.g. `mem_core_arvalid = 1`).
+The `.bin` must be on 19p-rt's local disk.
+
 ## Viewing (`make wave`)
 
 ```bash

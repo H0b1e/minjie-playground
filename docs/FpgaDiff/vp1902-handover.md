@@ -58,8 +58,10 @@ Follow the checklist in `vp1902/README.md`; the deltas are:
 - `Makefile`: `DDR_IP_DIR`/`EXPECTED` guard → vp1902 profile (contract
   unchanged except `PLATFORM_PART` and the ECC field rename
   `DDR_ECC_EN` → `ECC_EN`).
-- Uncommitted working-tree change in `script/ip/xdma_ep.tcl` (part-branch +
-  quad vars + `user_clk_sd`) — reconcile or supersede it during this phase.
+- `script/ip/xdma_ep.tcl` carries part-portable branches (smartconnect /
+  quad enums, `93ce5e0`); it does NOT instantiate the Versal CPM/PHY/GT
+  companion stack — the canonical VP1902 PCIe build lives in
+  `vp1902/pcie/build/`.
 - Re-check `script/timing.tcl` (`phy_pclk` 8 ns assumption) and the probe
   gated-clock names in `runtime/user_script/hw_run_uhd.tcl` against the new
   user clock.
